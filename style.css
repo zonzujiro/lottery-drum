@@ -1,0 +1,16 @@
+.lottery-drum {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.input-wrapper {
+    height: 50px;
+    display: flex;
+    align-items: center;
+    background-color: whitesmoke;
+}
+
+.sidebar {
+    width: 500px;
+}

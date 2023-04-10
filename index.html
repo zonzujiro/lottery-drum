@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <title>Lottery drum</title>
+  <head>
+    <script src="./script.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Lottery drum</h1>
+      <div class="lottery-drum">
+        <div class="input-wrapper">
+          <input
+            class="sheet-loader"
+            type="file"
+            accept=".xlsx,.xls"
+            title="sheet-loader"
+          />
+        </div>
+        <div class="results">
+          <h2 class="winner"></h2>
+          <div class="participants"></div>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>
