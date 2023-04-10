@@ -73,6 +73,7 @@ const parseSheet = async (file) => {
 document.addEventListener('DOMContentLoaded', () => {
   const sheetLoader = document.querySelector('.sheet-loader');
   const winnerScreen = document.querySelector('.winner');
+  const participantsScreen = document.querySelector('.participants');
 
   const ticketsToRender = {};
 
@@ -117,10 +118,12 @@ document.addEventListener('DOMContentLoaded', () => {
       winner: winner[sheetKeys.description],
     });
 
+    participantsScreen.innerHTML = `<h2>Total tickets: ${tickets.length}</h2>`;
+
     winnerScreen.innerHTML = `<h2>Winner!<h2> <p>Ticket number: ${winnerTicket}</p><p>${
       winner[sheetKeys.description]
     }</p>`;
 
-    prettyPrintParticipants(ticketsToRender);
+    // prettyPrintParticipants(ticketsToRender);
   });
 });
