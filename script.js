@@ -1,17 +1,47 @@
+//@ts-check
 const TICKET_PRICE = 300;
-const PUSTOVIT = 100000;
 
-const selectWinner = (max) => {
+const selectTicket = (max) => {
   const min = 1;
 
   return Math.floor(Math.random() * (max - min + 1) + min);
 };
 
+const selectWinners = (tickets, sheetKeys, { numberOfWinners }) => {
+  let clonedTickets = [...tickets];
+  const winners = [];
+
+  while (winners.length < numberOfWinners) {
+    const ticket = selectTicket(clonedTickets.length);
+    const winner = clonedTickets[ticket];
+    winners.push(winner);
+    clonedTickets = clonedTickets.filter(
+      (ticket) =>
+        ticket[sheetKeys.description] !== winner[sheetKeys.description]
+    );
+  }
+
+  return winners;
+};
+
 const isMonocat = (description) => {
-  // 🐈
-  const emojis = description.match(/\p{Emoji}+/gu);
+  const emojis = description.match(/\p{Emoji}+/gu); // 🐈
 
   return emojis && emojis[0].charCodeAt() === 55357;
+};
+
+const isMe = (description) => {
+  return description === 'З платинової картки';
+};
+
+const isPrivateBank = (description) => {
+  return description === 'Від: P24 CR MD UA';
+};
+
+const hasCorrectDescription = (description) => {
+  return (
+    !isMonocat(description) && !isMe(description) && !isPrivateBank(description)
+  );
 };
 
 const prettyPrintParticipants = (participants) => {
@@ -58,72 +88,93 @@ const parseSheet = async (file) => {
   const result = {};
 
   workbook.SheetNames.forEach((sheetName) => {
-    const roa = XLSX.utils.sheet_to_row_object_array(
+    const row = XLSX.utils.sheet_to_row_object_array(
       workbook.Sheets[sheetName]
     );
 
-    if (roa.length > 0) {
-      result[sheetName] = roa;
+    if (row.length > 0) {
+      result[sheetName] = row;
     }
   });
 
   return result.statement;
 };
 
+const isCorrectRecord = (record, sheetKeys) => {
+  return (
+    record[sheetKeys.value] >= 0 &&
+    hasCorrectDescription(record[sheetKeys.description])
+  );
+};
+
+const renderWinners = (winners, sheetKeys) => {
+  return winners
+    .map((winner) => `<p>🤑 ${winner[sheetKeys.description]}</p>`)
+    .join('');
+};
+
+const createTickets = (participants, sheetKeys) => {
+  const toLog = {};
+
+  const donations = participants.reduce((acc, participant) => {
+    const key = participant[sheetKeys.description];
+    const existingTickets = acc[key] || 0;
+
+    return {
+      ...acc,
+      [key]: existingTickets + participant[sheetKeys.value],
+    };
+  }, {});
+
+  const results = participants
+    .filter((participant) => {
+      return donations[participant[sheetKeys.description]] >= TICKET_PRICE;
+    })
+    .map((participant) => {
+      const tickets = Math.trunc(
+        donations[participant[sheetKeys.description]] / TICKET_PRICE
+      );
+
+      const duplicates = Array.from({ length: tickets }).fill(participant);
+
+      toLog[participant[sheetKeys.description]] = duplicates.length;
+
+      return duplicates;
+    })
+    .flat();
+
+  console.log({ tickets: toLog, donations });
+
+  return results;
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   const sheetLoader = document.querySelector('.sheet-loader');
   const winnerScreen = document.querySelector('.winner');
   const participantsScreen = document.querySelector('.participants');
+  const drumRoller = document.getElementById('drum-roller');
 
-  const ticketsToRender = {};
+  const roll = async () => {
+    const numberOfWinners =
+      document.querySelector('.number-of-winners').value || 1;
 
-  sheetLoader.addEventListener('change', async (ev) => {
-    const data = await parseSheet(sheetLoader.files[0]);
-    const sheetKeys = collectKeys(data[0]);
+    const parsedSheet = await parseSheet(sheetLoader.files[0]);
+    const sheetKeys = collectKeys(parsedSheet[0]);
 
-    const lotteryParticipants = data.filter((record) => {
-      return (
-        parseInt(record[sheetKeys.dateAndTime]) > 6 &&
-        record[sheetKeys.value] >= TICKET_PRICE &&
-        !isMonocat(record[sheetKeys.description]) &&
-        record[sheetKeys.value] !== PUSTOVIT
-      );
-    });
+    const lotteryParticipants = parsedSheet.filter((record) =>
+      isCorrectRecord(record, sheetKeys)
+    );
 
-    const tickets = lotteryParticipants.reduce((acc, participant) => {
-      const usersTickets = parseInt(
-        participant[sheetKeys.value] / TICKET_PRICE
-      );
-
-      ticketsToRender[participant[sheetKeys.description]] = usersTickets;
-
-      if (usersTickets === 1) {
-        return [...acc, participant];
-      }
-
-      const duplicates = Array.from({ length: usersTickets }).fill(participant);
-
-      return [...acc, ...duplicates];
-    }, []);
-
-    const winnerTicket = selectWinner(tickets.length);
-
-    const winner = tickets[winnerTicket];
-
-    console.log(ticketsToRender);
-
-    console.log({
-      totalTickets: tickets.length,
-      winnerTicket,
-      winner: winner[sheetKeys.description],
-    });
+    const tickets = createTickets(lotteryParticipants, sheetKeys);
+    const winners = selectWinners(tickets, sheetKeys, { numberOfWinners });
 
     participantsScreen.innerHTML = `<h2>Total tickets: ${tickets.length}</h2>`;
 
-    winnerScreen.innerHTML = `<h2>Winner!<h2> <p>Ticket number: ${winnerTicket}</p><p>${
-      winner[sheetKeys.description]
-    }</p>`;
+    winnerScreen.innerHTML = `<h2>Aaaaaand... we have a winner!<h2> ${renderWinners(
+      winners,
+      sheetKeys
+    )}`;
+  };
 
-    // prettyPrintParticipants(ticketsToRender);
-  });
+  drumRoller.addEventListener('click', roll);
 });
