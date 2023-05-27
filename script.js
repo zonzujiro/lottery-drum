@@ -44,18 +44,6 @@ const hasCorrectDescription = (description) => {
   );
 };
 
-const prettyPrintParticipants = (participants) => {
-  const participantsScreen = document.querySelector('.participants');
-
-  const htmlSource = Object.entries(participants)
-    .map(([key, value]) => {
-      return `<p class="participant">${key}: ${value}</p>`;
-    })
-    .join('');
-
-  participantsScreen.innerHTML = `<h2>Participants</h2> ${htmlSource}`;
-};
-
 const collectKeys = (row) => {
   const [
     dateAndTime,
